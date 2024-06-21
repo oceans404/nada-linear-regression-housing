@@ -1,0 +1,12 @@
+name = "linear-regression-housing"
+version = "0.1.0"
+authors = [""]
+
+[[programs]]
+path = "src/main.py"
+prime_size = 128
+
+[[programs]]
+path = "src/linear_regression_12.py"
+name = "linear_regression_12"
+prime_size = 128

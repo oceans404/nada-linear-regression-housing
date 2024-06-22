@@ -6,6 +6,8 @@ import nada_numpy as na
 from nada_ai.linear_model import LinearRegression
 
 def nada_main():
+    # Set precision
+    na.set_log_scale(32)
     # Step 1: We use Nada NumPy wrapper to create "Party0" and "Party1"
     parties = na.parties(2)
 

@@ -26,6 +26,8 @@ housing_data_file = './Housing-transformed.csv'
 og_housing_data.to_csv(housing_data_file, index=False)
 
 async def main():
+    # Set log scale to match the precision set in the nada program
+    na.set_log_scale(32)
     cluster_id = os.getenv("NILLION_CLUSTER_ID")
     program_name = "linear_regression_12"
     program_mir_path = f"./target/{program_name}.nada.bin"

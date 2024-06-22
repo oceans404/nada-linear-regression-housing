@@ -173,6 +173,7 @@ async def store_secrets(
     party_id: str,
     party_name: str,
     secrets: nillion.Secrets,
+    permissions: nillion.Permissions = None
 ):
     """
     Asynchronous function to store secret values on the nillion client.
@@ -190,7 +191,7 @@ async def store_secrets(
     """
     secret_bindings = nillion.ProgramBindings(program_id)
     secret_bindings.add_input_party(party_name, party_id)
-    store_id = await client.store_secrets(cluster_id, secret_bindings, secrets, None)
+    store_id = await client.store_secrets(cluster_id, secret_bindings, secrets, permissions)
     return store_id
 
 

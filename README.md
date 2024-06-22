@@ -1,6 +1,6 @@
 # Linear regression on housing data with blind inference
 
-Predict housing prices based on 12 features: area, bedrooms, bathrooms, stories, mainroad, guestroom, basement, hotwaterheating, airconditioning, parking, prefarea, furnishingstatus
+Run blind inference to predict housing prices based on 12 features: area, bedrooms, bathrooms, stories, mainroad, guestroom, basement, hotwaterheating, airconditioning, parking, prefarea, furnishingstatus
 
 Housing dataset: https://www.kaggle.com/datasets/yasserh/housing-prices-dataset/data
 
@@ -10,7 +10,7 @@ Party0 takes the housing dataset and uses it to train a linear model with scikit
 
 Party1 creates a new input with an array of features.
 
-Party1 computes `linear_regression_12` to run blind inference on the secret trained data, passing in their new input as a compute time secret. Party1 gets the expected price of a house with their input features.
+Party1 computes `linear_regression_12` to run blind inference on the secret trained data, passing in their new input as a compute time secret. Party1 gets the expected price of a house with their input features without ever seeing the linear regression model state, which stays secret.
 
 ## Run this example
 

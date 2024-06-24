@@ -91,6 +91,7 @@ async def store_secret_array(
     secret_array: np.ndarray,
     name: str,
     nada_type: Any,
+    permissions: nillion.Permissions = None,
 ):
     """
     Asynchronous function to store secret arrays on the nillion client.
@@ -104,6 +105,8 @@ async def store_secret_array(
         secret_array (np.ndarray): Secret array.
         name (str): Secrets name.
         nada_type (Any): Nada type.
+        permissions: nillion.Permissions: Optional Permissions.
+        
 
     Returns:
         str: Store ID.
@@ -117,6 +120,7 @@ async def store_secret_array(
         party_id,
         party_name,
         secrets,
+        permissions,
     )
     return store_id
 
@@ -130,6 +134,8 @@ async def store_secret_value(
     secret_value: Any,
     name: str,
     nada_type: Any,
+    permissions: nillion.Permissions = None,
+    
 ):
     """
     Asynchronous function to store secret values on the nillion client.
@@ -143,6 +149,7 @@ async def store_secret_value(
         secret_value (Any): Secret single value.
         name (str): Secrets name.
         nada_type (Any): Nada type.
+        permissions: nillion.Permissions: Optional Permissions.
 
     Returns:
         str: Store ID.
@@ -162,6 +169,7 @@ async def store_secret_value(
         party_id,
         party_name,
         secrets,
+        permissions,
     )
     return store_id
 
@@ -185,6 +193,7 @@ async def store_secrets(
         party_id (str): Party ID.
         party_name (str): Party name.
         secrets (nillion.Secrets): Secrets.
+        permissions: nillion.Permissions: Optional Permissions.
 
     Returns:
         str: Store ID.

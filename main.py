@@ -1,47 +1,63 @@
 import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import asyncio
 import nada_numpy as na
 import nada_numpy.client as na_client
 import numpy as np
+import pandas as pd
 import py_nillion_client as nillion
+from cosmpy.aerial.client import LedgerClient
+from cosmpy.aerial.wallet import LocalWallet
+from cosmpy.crypto.keypairs import PrivateKey
 from dotenv import load_dotenv
-from nillion_python_helpers import create_nillion_client
+from nillion_python_helpers import (create_nillion_client,
+                                    create_payments_config)
+from py_nillion_client import NodeKey, UserKey
 from sklearn.linear_model import LinearRegression
 from nada_ai.client import SklearnClient
-import pandas as pd
 
-from nillion_utils import compute, store_program, store_secrets
+from nillion_utils import compute, store_program, store_secrets #local helper file
 
 # Load environment variables from a .env file
 load_dotenv()
 
-# transform Housing.csv dataset to integers
+# Set pandas option to retain old downcasting behavior
+pd.set_option('future.no_silent_downcasting', True)
+
+# Transform Housing.csv dataset to integers
 og_housing_data = pd.read_csv('./Housing.csv')
 # yes/no to 1/0
-og_housing_data.replace({'yes': 1, 'no': 0}, inplace=True)
+og_housing_data = og_housing_data.replace({'yes': 1, 'no': 0}).infer_objects(copy=False)
 # furnishingstatus to 2/1/0
-og_housing_data['furnishingstatus'].replace({'furnished': 2, 'semi-furnished': 1, 'unfurnished': 0}, inplace=True)
-# save the transformed data
+og_housing_data['furnishingstatus'] = og_housing_data['furnishingstatus'].replace({'furnished': 2, 'semi-furnished': 1, 'unfurnished': 0}).infer_objects(copy=False)
+# Save the transformed data
 housing_data_file = './Housing-transformed.csv'
 og_housing_data.to_csv(housing_data_file, index=False)
 
 async def main():
     # Set log scale to match the precision set in the nada program
     na.set_log_scale(32)
-    cluster_id = os.getenv("NILLION_CLUSTER_ID")
     program_name = "linear_regression_12"
     program_mir_path = f"./target/{program_name}.nada.bin"
+
+    cluster_id = os.getenv("NILLION_CLUSTER_ID")
+    grpc_endpoint = os.getenv("NILLION_NILCHAIN_GRPC")
+    chain_id = os.getenv("NILLION_NILCHAIN_CHAIN_ID")
 
     # Create 2 parties - Party0 and Party1
     party_names = na_client.parties(2)
 
-    # Create NillionClient for Party0
+    # Create NillionClient for Party0, storer of the model
     seed_0 = 'seed-party-0'
     userkey_party_0 = nillion.UserKey.from_seed(seed_0)
     nodekey_party_0 = nillion.NodeKey.from_seed(seed_0)
     client_0 = create_nillion_client(userkey_party_0, nodekey_party_0)
     party_id_0 = client_0.party_id
     user_id_0 = client_0.user_id
+    print(user_id_0)
 
     # Create NillionClient for Party1
     seed_1 = 'seed-party-1'
@@ -50,9 +66,27 @@ async def main():
     client_1 = create_nillion_client(userkey_party_1, nodekey_party_1)
     party_id_1 = client_1.party_id
     user_id_1 = client_1.user_id
+    print(user_id_1)
+
+    # Configure payments
+    payments_config = create_payments_config(chain_id, grpc_endpoint)
+    print(payments_config)
+    payments_client = LedgerClient(payments_config)
+    payments_wallet = LocalWallet(
+        PrivateKey(bytes.fromhex(os.getenv("NILLION_NILCHAIN_PRIVATE_KEY_0"))),
+        prefix="nillion",
+    )
 
     # Party0 stores the linear regression Nada program
-    program_id = await store_program(client_0, user_id_0, cluster_id, program_name, program_mir_path)
+    program_id = await store_program(
+        client_0,
+        payments_wallet,
+        payments_client,
+        user_id_0,
+        cluster_id,
+        program_name,
+        program_mir_path,
+    )
 
     # Load the transformed housing dataset
     data = pd.read_csv(housing_data_file)
@@ -74,7 +108,7 @@ async def main():
     model_client = SklearnClient(fit_model)
 
     # Party0 creates a secret
-    model_secrets = nillion.Secrets(model_client.export_state_as_secrets("my_model", na.SecretRational))
+    model_secrets = nillion.NadaValues(model_client.export_state_as_secrets("my_model", na.SecretRational))
 
     # create permissions for model_secrets: Party0 has default permissions, Party1 has compute permissions
     permissions_for_model_secrets = nillion.Permissions.default_for_user(user_id_0)
@@ -82,8 +116,16 @@ async def main():
         user_id_1: {program_id},
     })
 
-    # Party0 stores the model as a Nillion Secret
-    model_store_id = await store_secrets(client_0, cluster_id, program_id, party_id_0, party_names[0], model_secrets, permissions_for_model_secrets)
+    # # Party0 stores the model as a Nillion Secret
+    model_store_id = await store_secrets(
+        client_0,
+        payments_wallet,
+        payments_client,
+        cluster_id,
+        model_secrets,
+        1,
+        permissions_for_model_secrets,
+    )
 
     # Party1 creates the new input secret, which will be provided to compute as a compute time secret
     # home features
@@ -103,7 +145,7 @@ async def main():
     dream_home = [area, bedrooms, bathrooms, stories, mainroad, guestroom, basement, hotwaterheating, airconditioning, parking, prefarea, furnishingstatus]
     new_house = np.array(dream_home)
     my_input = na_client.array(new_house, "my_input", na.SecretRational)
-    input_secrets = nillion.Secrets(my_input)
+    input_secrets = nillion.NadaValues(my_input)
 
     # Set up the compute bindings for the parties
     compute_bindings = nillion.ProgramBindings(program_id)
@@ -114,8 +156,19 @@ async def main():
     print(f"Computing using program {program_id}")
     print(f"Use secret store_id: {model_store_id}")
 
-    # Party1 performs blind compuptation that runs inference and return the result
-    inference_result = await compute(client_1, cluster_id, compute_bindings, [model_store_id], input_secrets)
+    # Party1 performs blind compuptation that runs inference and returns the result
+    # Compute, passing all params including the receipt that shows proof of payment
+    inference_result = await compute(
+        client_1,
+        payments_wallet,
+        payments_client,
+        program_id,
+        cluster_id,
+        compute_bindings,
+        [model_store_id],
+        input_secrets,
+        verbose=True,
+    )
     
     # Rescale the obtained result by the quantization scale
     outputs = [na_client.float_from_rational(inference_result["my_output"])]
@@ -141,6 +194,7 @@ async def main():
     """)
     print(f"The predicted price of this home is ${"{:,.2f}".format(outputs[0])}")
     return inference_result
+    return
 
 # Run the main function if the script is executed directly
 if __name__ == "__main__":

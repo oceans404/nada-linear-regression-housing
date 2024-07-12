@@ -19,7 +19,7 @@ from py_nillion_client import NodeKey, UserKey
 from sklearn.linear_model import LinearRegression
 from nada_ai.client import SklearnClient
 
-from nillion_utils import compute, store_program, store_secrets #local helper file
+from nillion_utils import compute, store_program, store_secrets, get_user_id_by_seed #local helper file
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -57,7 +57,6 @@ async def main():
     client_0 = create_nillion_client(userkey_party_0, nodekey_party_0)
     party_id_0 = client_0.party_id
     user_id_0 = client_0.user_id
-    print(user_id_0)
 
     # Create NillionClient for Party1
     seed_1 = 'seed-party-1'
@@ -66,11 +65,9 @@ async def main():
     client_1 = create_nillion_client(userkey_party_1, nodekey_party_1)
     party_id_1 = client_1.party_id
     user_id_1 = client_1.user_id
-    print(user_id_1)
 
     # Configure payments
     payments_config = create_payments_config(chain_id, grpc_endpoint)
-    print(payments_config)
     payments_client = LedgerClient(payments_config)
     payments_wallet = LocalWallet(
         PrivateKey(bytes.fromhex(os.getenv("NILLION_NILCHAIN_PRIVATE_KEY_0"))),
@@ -112,11 +109,13 @@ async def main():
 
     # create permissions for model_secrets: Party0 has default permissions, Party1 has compute permissions
     permissions_for_model_secrets = nillion.Permissions.default_for_user(user_id_0)
-    permissions_for_model_secrets.add_compute_permissions({
-        user_id_1: {program_id},
-    })
 
-    # # Party0 stores the model as a Nillion Secret
+    # along with user_id_1, allow other user ids to use the secret in the linear regression program by specifying user key seeds
+    allowed_user_ids = [user_id_1, get_user_id_by_seed("inference_1"), get_user_id_by_seed("inference_2"), get_user_id_by_seed("inference_3")]
+    permissions_dict = {user: {program_id} for user in allowed_user_ids}
+    permissions_for_model_secrets.add_compute_permissions(permissions_dict)
+
+    # Party0 stores the model as a Nillion Secret
     model_store_id = await store_secrets(
         client_0,
         payments_wallet,
@@ -194,7 +193,6 @@ async def main():
     """)
     print(f"The predicted price of this home is ${"{:,.2f}".format(outputs[0])}")
     return inference_result
-    return
 
 # Run the main function if the script is executed directly
 if __name__ == "__main__":

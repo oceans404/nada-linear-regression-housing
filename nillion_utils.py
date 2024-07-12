@@ -1,3 +1,5 @@
+from nillion_python_helpers import (create_nillion_client)
+
 """General utils functions"""
 
 import os
@@ -283,3 +285,19 @@ async def compute(
                 print(f"✅ Compute complete for compute_id {compute_event.uuid}")
                 print(f"🖥️  The result is {compute_event.result.value}")
             return compute_event.result.value
+        
+
+def get_user_id_by_seed(seed: str) -> str:
+    """
+    Creates a Nillion client using the provided user key seed and returns the user id.
+    
+    Args:
+    - seed (str): The seed string used to generate the UserKey and NodeKey.
+    
+    Returns:
+    - str: The user id of the created Nillion client.
+    """
+    userkey = nillion.UserKey.from_seed(seed)
+    nodekey = nillion.NodeKey.from_seed(seed)
+    client = create_nillion_client(userkey, nodekey)
+    return client.user_id

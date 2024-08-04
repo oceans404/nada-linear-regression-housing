@@ -39,8 +39,8 @@ curl https://nilup.nilogy.xyz/install.sh | bash
 Install and set your version of the nillion sdk - this installs nillion-devnet and other tools
 
 ```
-nilup install 0.3.0
-nilup use 0.3.0
+nilup install latest
+nilup use latest
 ```
 
 ## Spin up the local nillion-devnet

@@ -51,7 +51,7 @@ async def main():
     party_names = na_client.parties(2)
 
     # Create NillionClient for Party0, storer of the model
-    seed_0 = 'seed-party-0'
+    seed_0 = 'seed-party-model'
     userkey_party_0 = nillion.UserKey.from_seed(seed_0)
     nodekey_party_0 = nillion.NodeKey.from_seed(seed_0)
     client_0 = create_nillion_client(userkey_party_0, nodekey_party_0)
@@ -59,7 +59,7 @@ async def main():
     user_id_0 = client_0.user_id
 
     # Create NillionClient for Party1
-    seed_1 = 'seed-party-1'
+    seed_1 = 'seed-party-input'
     userkey_party_1 = nillion.UserKey.from_seed(seed_1)
     nodekey_party_1 = nillion.NodeKey.from_seed(seed_1)
     client_1 = create_nillion_client(userkey_party_1, nodekey_party_1)
